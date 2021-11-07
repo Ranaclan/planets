@@ -10,11 +10,26 @@ public class skyboxPlanet : MonoBehaviour
     private skyboxTerrainFaces[] terrainFaces;
     private int resolution = 20;
     //planet surface
+    private MeshFilter surfaceMeshFilter;
+    private Mesh surfaceMesh;
     public Vector3[] surfaceVertices;
+    private int maxSurfaceVertices = 6;
+    private bool surface = false;
+    private int renderVertices = 0;
+    public Material surfaceMat;
+    //skybox
+    private Transform skyboxCam;
+    private skyboxCamera camScript;
+    private float skyboxScale;
 
     private void Start()
     {
         surfaceVertices = new Vector3[] { Vector3.zero, Vector3.zero, Vector3.zero};
+
+        skyboxCam = transform.Find("SkyboxCamera").transform;
+        camScript = skyboxCam.GetComponent<skyboxCamera>();
+        skyboxScale = camScript.skyboxScale;
+
         InitialiseSkybox();
         GenerateSkyboxMesh();
     }
@@ -25,6 +40,8 @@ public class skyboxPlanet : MonoBehaviour
         {
             face.CheckPlayerDistance(this);
         }
+
+        SurfaceMesh();
     }
 
     private void InitialiseSkybox()
@@ -38,12 +55,12 @@ public class skyboxPlanet : MonoBehaviour
         for (int i = 0; i < 6; i++)
         {
             //create face mesh
-            GameObject meshObj = new GameObject("mesh" + i);
-            meshObj.transform.parent = transform;
-            meshObj.layer = LayerMask.NameToLayer("PlanetSkybox");
+            GameObject meshObject = new GameObject("mesh" + i);
+            meshObject.transform.parent = transform;
+            meshObject.layer = LayerMask.NameToLayer("PlanetSkybox");
 
-            meshObj.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Standard"));
-            skyboxMeshFilters[i] = meshObj.AddComponent<MeshFilter>();
+            meshObject.AddComponent<MeshRenderer>().sharedMaterial = new Material(surfaceMat);
+            skyboxMeshFilters[i] = meshObject.AddComponent<MeshFilter>();
             skyboxMeshFilters[i].sharedMesh = new Mesh();
 
             terrainFaces[i] = new skyboxTerrainFaces(skyboxMeshFilters[i].sharedMesh, resolution, directions[i]);
@@ -58,19 +75,46 @@ public class skyboxPlanet : MonoBehaviour
         }
     }
 
-    public void InitialiseSurface(Vector3 vertex)
+    public void AddSurfaceVertex(Vector3 vertex)
     {
-        for (int i = 0; i < surfaceVertices.Length; i++)
+        //add vertices on skybox planet when skybox camera close enough
+        if (renderVertices < maxSurfaceVertices)
         {
-            if (surfaceVertices[i] == Vector3.zero)
+            for (int i = 0; i < surfaceVertices.Length; i++)
             {
-                surfaceVertices[i] = vertex;
-                break;
+                if (surfaceVertices[i] == Vector3.zero)
+                {
+                    surfaceVertices[i] = vertex * skyboxScale;
+                    renderVertices++;
+                    break;
+                }
             }
         }
+    }
 
-        Debug.Log(surfaceVertices[0]);
-        Debug.Log(surfaceVertices[1]);
-        Debug.Log(surfaceVertices[2]);
+    private void SurfaceMesh()
+    {
+        if (renderVertices == 3 && !surface)
+        {
+            //construct mesh of surface when player close enough
+            GameObject surfaceObject = new GameObject("surface");
+            surfaceObject.transform.parent = transform;
+            surfaceMeshFilter = surfaceObject.AddComponent<MeshFilter>();
+            surfaceObject.AddComponent<MeshRenderer>().sharedMaterial = new Material(surfaceMat);
+            MeshCollider surfaceCollider = surfaceObject.AddComponent<MeshCollider>();
+            surfaceObject.layer = LayerMask.NameToLayer("Ground");
+            surfaceMeshFilter.sharedMesh = new Mesh();
+            surfaceMesh = surfaceMeshFilter.sharedMesh;
+            surfaceMesh.name = "SurfaceMesh";
+            surfaceCollider.sharedMesh = surfaceMesh;
+
+            surfaceMesh.Clear();
+            surfaceMesh.vertices = surfaceVertices;
+            surfaceMesh.triangles = new int[3] {0, 1, 2};
+            surfaceMesh.RecalculateNormals();
+
+            surface = true;
+            renderVertices = 0;
+        }
     }
 }

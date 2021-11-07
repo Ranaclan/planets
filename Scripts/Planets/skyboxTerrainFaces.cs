@@ -41,16 +41,18 @@ public class skyboxTerrainFaces
         int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
         int triangleIndex = 0;
 
+        //loop through vertices of face
         for (int y = 0; y < resolution; y++)
         {
             for (int x = 0; x < resolution; x++)
             {
                 int i = x + y * resolution;
                 Vector2 percent = new Vector2(x, y) / (resolution - 1);
-                Vector3 pointOnUnitCube = localUp + (percent.x - 0.5f) * 2 * axisA + (percent.y - 0.5f) * 2 * axisB;
-                Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
+                Vector3 pointOnUnitCube = localUp + (percent.x - 0.5f) * 2 * axisA + (percent.y - 0.5f) * 2 * axisB; //determine vertex positon
+                Vector3 pointOnUnitSphere = pointOnUnitCube.normalized; //make each vertex same distance from centre, forming sphere
                 vertices[i] = pointOnUnitSphere;
 
+                //set triangles around current vertex (if vertex is not on far right or bottom edge)
                 if (x != resolution - 1 && y != resolution - 1)
                 {
                     triangles[triangleIndex] = i;
@@ -77,9 +79,9 @@ public class skyboxTerrainFaces
             for (int x = 0; x < resolution; x++)
             {
                 int i = x + y * resolution;
-                if (Vector3.Distance(skyboxCamera.position, vertices[i]) < (5 / skyboxScale))
+                if (Vector3.Distance(skyboxCamera.position, vertices[i]) < (500 / skyboxScale))
                 {
-                    script.InitialiseSurface(vertices[i]);
+                    script.AddSurfaceVertex(vertices[i]);
                 }
             }
         }
