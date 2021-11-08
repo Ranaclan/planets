@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public class skyboxPlanet : MonoBehaviour
@@ -24,9 +25,13 @@ public class skyboxPlanet : MonoBehaviour
 
     private void Start()
     {
-        surfaceVertices = new Vector3[] { Vector3.zero, Vector3.zero, Vector3.zero};
+        surfaceVertices = new Vector3[maxSurfaceVertices];
+        for (int i = 0; i < maxSurfaceVertices; i++)
+        {
+            surfaceVertices[i] = Vector3.zero;
+        }
 
-        skyboxCam = transform.Find("SkyboxCamera").transform;
+        skyboxCam = GameObject.Find("SkyboxCamera").transform;
         camScript = skyboxCam.GetComponent<skyboxCamera>();
         skyboxScale = camScript.skyboxScale;
 
@@ -55,11 +60,11 @@ public class skyboxPlanet : MonoBehaviour
         for (int i = 0; i < 6; i++)
         {
             //create face mesh
-            GameObject meshObject = new GameObject("mesh" + i);
+            GameObject meshObject = new GameObject("FaceMesh" + i);
             meshObject.transform.parent = transform;
             meshObject.layer = LayerMask.NameToLayer("PlanetSkybox");
 
-            meshObject.AddComponent<MeshRenderer>().sharedMaterial = new Material(surfaceMat);
+            meshObject.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Standard"));
             skyboxMeshFilters[i] = meshObject.AddComponent<MeshFilter>();
             skyboxMeshFilters[i].sharedMesh = new Mesh();
 
@@ -80,24 +85,18 @@ public class skyboxPlanet : MonoBehaviour
         //add vertices on skybox planet when skybox camera close enough
         if (renderVertices < maxSurfaceVertices)
         {
-            for (int i = 0; i < surfaceVertices.Length; i++)
-            {
-                if (surfaceVertices[i] == Vector3.zero)
-                {
-                    surfaceVertices[i] = vertex * skyboxScale;
-                    renderVertices++;
-                    break;
-                }
-            }
+            surfaceVertices[renderVertices] = vertex * skyboxScale;
+            renderVertices++;
         }
     }
 
     private void SurfaceMesh()
     {
-        if (renderVertices == 3 && !surface)
+        if (renderVertices % 3 == 0 && !surface)
         {
+            Debug.Log("a");
             //construct mesh of surface when player close enough
-            GameObject surfaceObject = new GameObject("surface");
+            GameObject surfaceObject = new GameObject("Surface");
             surfaceObject.transform.parent = transform;
             surfaceMeshFilter = surfaceObject.AddComponent<MeshFilter>();
             surfaceObject.AddComponent<MeshRenderer>().sharedMaterial = new Material(surfaceMat);
@@ -106,12 +105,19 @@ public class skyboxPlanet : MonoBehaviour
             surfaceMeshFilter.sharedMesh = new Mesh();
             surfaceMesh = surfaceMeshFilter.sharedMesh;
             surfaceMesh.name = "SurfaceMesh";
-            surfaceCollider.sharedMesh = surfaceMesh;
+
+            //create triangles
+            int[] triangles = new int[renderVertices];
+            for (int i = 0; i < triangles.Length; i++)
+            {
+                triangles[i] = i;
+            }
 
             surfaceMesh.Clear();
             surfaceMesh.vertices = surfaceVertices;
-            surfaceMesh.triangles = new int[3] {0, 1, 2};
+            surfaceMesh.triangles = triangles;
             surfaceMesh.RecalculateNormals();
+            surfaceCollider.sharedMesh = surfaceMesh;
 
             surface = true;
             renderVertices = 0;
